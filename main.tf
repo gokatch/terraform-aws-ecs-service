@@ -488,8 +488,8 @@ resource "aws_ecs_task_definition" "main" {
         "logConfiguration": {
             "logDriver": "awslogs",
             "options": {
-            "awslogs-group": "${local.awslogs_group}"
-            "awslogs-region": "${var.aws_region}"
+              "awslogs-group": "${local.awslogs_group}",
+              "awslogs-region": "${var.aws_region}"
             }
         },
         "entryPoint": [

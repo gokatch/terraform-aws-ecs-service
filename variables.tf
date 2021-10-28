@@ -146,12 +146,6 @@ variable "container_image" {
   type        = string
 }
 
-variable "container_definitions" {
-  description = "Container definitions provided as valid JSON document. Default uses golang:alpine running a simple hello world."
-  default     = ""
-  type        = string
-}
-
 variable "target_container_name" {
   description = "Name of the container the Load Balancer should target. Default: {name}-{environment}"
   default     = ""

@@ -476,8 +476,8 @@ resource "aws_ecs_task_definition" "main" {
   memory                   = var.ecs_use_fargate ? var.fargate_task_memory : ""
   execution_role_arn       = join("", aws_iam_role.task_execution_role.*.arn)
 
-  container_definitions = concat(var.container_definitions, [
-    <<-DEFINITION
+  container_definitions = <<-DEFINITION
+    [
       {
         "environmentFiles": [
             {
@@ -516,8 +516,8 @@ resource "aws_ecs_task_definition" "main" {
 
         "name": "${var.product}-${var.environment}-ecs-task"
       }
-      DEFINITION
-  ])
+    ]
+    DEFINITION
 
   volume {
     name = "efs-config"

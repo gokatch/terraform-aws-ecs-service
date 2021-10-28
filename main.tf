@@ -351,6 +351,16 @@ data "aws_iam_policy_document" "task_execution_role_policy_doc" {
 resource "aws_iam_role" "task_role" {
   name               = "ecs-task-role-${var.name}-${var.environment}"
   assume_role_policy = data.aws_iam_policy_document.ecs_assume_role_policy.json
+}
+
+resource "aws_iam_role" "task_execution_role" {
+  # if ecs_use_fargate is True, create aws_iam_role resource
+  # if ecs_use_fargate is False, check whether value of ec2_create_task_execution_role is True/False.
+  # if True, set to 1 creating the resource, if False, set to 0, not creating the resource
+  count = var.ecs_use_fargate ? 1 : var.ec2_create_task_execution_role ? 1 : 0
+
+  name               = "ecs-task-execution-role-${var.name}-${var.environment}"
+  assume_role_policy = data.aws_iam_policy_document.ecs_assume_role_policy.json
 
   inline_policy {
     name = "s3-katch-api-dev"
@@ -380,16 +390,6 @@ resource "aws_iam_role" "task_role" {
       }
     )
   }
-}
-
-resource "aws_iam_role" "task_execution_role" {
-  # if ecs_use_fargate is True, create aws_iam_role resource
-  # if ecs_use_fargate is False, check whether value of ec2_create_task_execution_role is True/False.
-  # if True, set to 1 creating the resource, if False, set to 0, not creating the resource
-  count = var.ecs_use_fargate ? 1 : var.ec2_create_task_execution_role ? 1 : 0
-
-  name               = "ecs-task-execution-role-${var.name}-${var.environment}"
-  assume_role_policy = data.aws_iam_policy_document.ecs_assume_role_policy.json
 }
 
 resource "aws_iam_role_policy" "task_execution_role_policy" {

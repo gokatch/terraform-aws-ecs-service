@@ -514,7 +514,7 @@ resource "aws_ecs_task_definition" "main" {
         "image": "${var.container_image}",
         "essential": true,
 
-        "name": "${var.product}-${var.environment}-ecs-task"
+        "name": "${var.name}-${var.environment}"
       }
     ]
     DEFINITION

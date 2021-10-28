@@ -240,3 +240,34 @@ variable "ecs_exec_enable" {
   default     = false
   type        = bool
 }
+
+variable "container_port" {
+  type    = string
+  default = "3000"
+}
+
+variable "aws_region" {
+  type    = string
+  default = "us-east-1"
+}
+
+variable "product" {
+  type = string
+}
+
+variable "efs_file_system_id" {
+  type = string
+}
+
+variable "efs_root_directory" {
+  type    = string
+  default = "/"
+}
+
+variable "env_s3_arn" {
+  type = string
+}
+
+variable "vol_container_path" {
+  type = string
+}

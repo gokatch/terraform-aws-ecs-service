@@ -351,6 +351,35 @@ data "aws_iam_policy_document" "task_execution_role_policy_doc" {
 resource "aws_iam_role" "task_role" {
   name               = "ecs-task-role-${var.name}-${var.environment}"
   assume_role_policy = data.aws_iam_policy_document.ecs_assume_role_policy.json
+
+  inline_policy {
+    name = "s3-katch-api-dev"
+    policy = jsonencode(
+      {
+        Statement = [
+          {
+            Action = [
+              "s3:GetObject",
+            ]
+            Effect = "Allow"
+            Resource = [
+              "${var.env_s3_arn}/*",
+            ]
+          },
+          {
+            Action = [
+              "s3:GetBucketLocation",
+            ]
+            Effect = "Allow"
+            Resource = [
+              "${var.env_s3_arn}",
+            ]
+          },
+        ]
+        Version = "2012-10-17"
+      }
+    )
+  }
 }
 
 resource "aws_iam_role" "task_execution_role" {
@@ -447,7 +476,56 @@ resource "aws_ecs_task_definition" "main" {
   memory                   = var.ecs_use_fargate ? var.fargate_task_memory : ""
   execution_role_arn       = join("", aws_iam_role.task_execution_role.*.arn)
 
-  container_definitions = var.container_definitions == "" ? local.default_container_definitions : var.container_definitions
+  container_definitions = concat(var.container_definitions, [
+    <<-DEFINITION
+      {
+        "environmentFiles": [
+            {
+            "value": "${var.env_s3_arn}/.env",
+            "type": "s3"
+            }
+        ],
+        "logConfiguration": {
+            "logDriver": "awslogs",
+            "options": {
+            "awslogs-group": "/ecs/${var.environment}/${var.product}",
+            "awslogs-region": "${var.aws_region}"
+            }
+        },
+        "entryPoint": [
+            "pm2-runtime",
+            "./process.yml"
+        ],
+        "portMappings": [
+            {
+            "hostPort": ${var.container_port},
+            "protocol": "tcp",
+            "containerPort": ${var.container_port}
+            }
+        ],
+        "cpu": 256,
+        "memory": 256,
+        "mountPoints": [
+            {
+                "containerPath": "${var.vol_container_path}",
+                "sourceVolume": "efs-config"
+            }
+        ],
+        "image": "${var.container_image}",
+        "essential": true,
+
+        "name": "${var.product}-${var.environment}-ecs-task"
+      }
+      DEFINITION
+  ])
+
+  volume {
+    name = "efs-config"
+    efs_volume_configuration {
+      file_system_id = var.efs_file_system_id
+      root_directory = var.efs_root_directory
+    }
+  }
 
   lifecycle {
     ignore_changes = [
@@ -485,11 +563,7 @@ locals {
   }
 
   ecs_service_placement_constraints = {
-    EC2 = [
-      {
-        type = "distinctInstance"
-      },
-    ]
+    EC2     = []
     FARGATE = []
   }
 

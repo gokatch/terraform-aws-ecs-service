@@ -348,24 +348,6 @@ data "aws_iam_policy_document" "task_execution_role_policy_doc" {
   }
 }
 
-data "aws_iam_policy_document" "task_execution_role_s3_policy_doc" {
-  statement {
-    actions = [
-      "s3:GetObject",
-    ]
-
-    resources = ["${var.env_s3_arn}/*"]
-  }
-
-  statement {
-    actions = [
-      "s3:GetBucketLocation",
-    ]
-
-    resources = ["${var.env_s3_arn}"]
-  }
-}
-
 resource "aws_iam_role" "task_role" {
   name               = "ecs-task-role-${var.name}-${var.environment}"
   assume_role_policy = data.aws_iam_policy_document.ecs_assume_role_policy.json
@@ -390,70 +372,6 @@ resource "aws_iam_role_policy" "task_execution_role_policy" {
   name   = "${aws_iam_role.task_execution_role[0].name}-policy"
   role   = aws_iam_role.task_execution_role[0].name
   policy = data.aws_iam_policy_document.task_execution_role_policy_doc.json
-}
-
-resource "aws_iam_role_policy" "task_execution_role_s3_policy" {
-  # if ecs_use_fargate is True, create aws_iam_role_policy resource
-  # if ecs_use_fargate is False, check whether value of ec2_create_task_execution_role is True/False.
-  # if True, set to 1 creating the resource, if False, set to 0, not creating the resource
-  count = var.ecs_use_fargate ? 1 : var.ec2_create_task_execution_role ? 1 : 0
-
-  name   = "${aws_iam_role.task_execution_role[0].name}-s3-policy"
-  role   = aws_iam_role.task_execution_role[0].name
-  policy = data.aws_iam_policy_document.task_execution_role_s3_policy_doc.json
-}
-
-#
-# ECS Exec
-#
-
-data "aws_iam_policy_document" "task_role_ecs_exec" {
-  count = var.ecs_exec_enable ? 1 : 0
-  statement {
-    sid    = "AllowECSExec"
-    effect = "Allow"
-
-    actions = [
-      "ssmmessages:CreateControlChannel",
-      "ssmmessages:CreateDataChannel",
-      "ssmmessages:OpenControlChannel",
-      "ssmmessages:OpenDataChannel"
-    ]
-
-    resources = ["*"]
-  }
-
-  statement {
-    sid = "AllowDescribeLogGroups"
-    actions = [
-      "logs:DescribeLogGroups",
-    ]
-
-    resources = ["*"]
-  }
-
-  statement {
-    sid = "AllowECSExecLogging"
-    actions = [
-      "logs:CreateLogStream",
-      "logs:DescribeLogStreams",
-      "logs:PutLogEvents",
-    ]
-    resources = ["${aws_cloudwatch_log_group.main.arn}:*"]
-  }
-}
-
-resource "aws_iam_policy" "task_role_ecs_exec" {
-  count       = var.ecs_exec_enable ? 1 : 0
-  name        = "${aws_iam_role.task_role.name}-ecs-exec"
-  description = "Allow ECS Exec with Cloudwatch logging when attached to an ECS task role"
-  policy      = join("", data.aws_iam_policy_document.task_role_ecs_exec.*.json)
-}
-
-resource "aws_iam_role_policy_attachment" "task_role_ecs_exec" {
-  count      = var.ecs_exec_enable ? 1 : 0
-  role       = join("", aws_iam_role.task_role.*.name)
-  policy_arn = join("", aws_iam_policy.task_role_ecs_exec.*.arn)
 }
 
 #

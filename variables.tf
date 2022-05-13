@@ -249,13 +249,14 @@ variable "product" {
   type = string
 }
 
-variable "efs_file_system_id" {
-  type = string
+variable "container_definitions_json" {
+    type = string
 }
 
-variable "efs_root_directory" {
-  type    = string
-  default = "/"
+variable "volumes" {
+  default     = []
+  description = "A list of volume definitions in JSON format that containers in your task may use"
+  type        = list(any)
 }
 
 variable "env_s3_arn" {

@@ -378,8 +378,7 @@ resource "aws_iam_role_policy" "task_execution_role_policy" {
 # ECS
 #
 
-data "aws_region" "current" {
-}
+data "aws_region" "current" {}
 
 # Create a task definition with a golang image so the ecs service can be
 # tested. We expect deployments will manage the future container definitions.
@@ -394,54 +393,20 @@ resource "aws_ecs_task_definition" "main" {
   memory                   = var.ecs_use_fargate ? var.fargate_task_memory : ""
   execution_role_arn       = join("", aws_iam_role.task_execution_role.*.arn)
 
-  container_definitions = <<-DEFINITION
-    [
-      {
-        "environmentFiles": [
-            {
-            "value": "${var.env_s3_arn}/.env",
-            "type": "s3"
-            }
-        ],
-        "logConfiguration": {
-            "logDriver": "awslogs",
-            "options": {
-              "awslogs-group": "${local.awslogs_group}",
-              "awslogs-region": "${var.aws_region}"
-            }
-        },
-        "entryPoint": [
-            "pm2-runtime",
-            "./process.yml"
-        ],
-        "portMappings": [
-            {
-            "hostPort": ${var.container_port},
-            "protocol": "tcp",
-            "containerPort": ${var.container_port}
-            }
-        ],
-        "cpu": 256,
-        "memory": 256,
-        "mountPoints": [
-            {
-                "containerPath": "${var.vol_container_path}",
-                "sourceVolume": "efs-config"
-            }
-        ],
-        "image": "${var.container_image}",
-        "essential": true,
+  container_definitions = var.container_definitions_json
 
-        "name": "${var.name}-${var.environment}"
+  dynamic "volume" {
+    for_each = var.volumes
+    content {
+      name      = volume.value.name
+
+      dynamic "efs_volume_configuration" {
+        for_each = lookup(volume.value, "efs_volume_configuration", [])
+        content {
+          file_system_id = lookup(efs_volume_configuration.value, "file_system_id", null)
+          root_directory = lookup(efs_volume_configuration.value, "root_directory", null)
+        }
       }
-    ]
-    DEFINITION
-
-  volume {
-    name = "efs-config"
-    efs_volume_configuration {
-      file_system_id = var.efs_file_system_id
-      root_directory = var.efs_root_directory
     }
   }
 

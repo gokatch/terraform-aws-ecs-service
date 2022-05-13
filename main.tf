@@ -416,7 +416,6 @@ resource "aws_ecs_task_definition" "main" {
       cpu,
       memory,
       execution_role_arn,
-      container_definitions,
     ]
   }
 }

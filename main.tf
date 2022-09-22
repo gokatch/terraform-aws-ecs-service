@@ -436,18 +436,11 @@ resource "aws_ecs_task_definition" "main" {
     ]
     DEFINITION
 
-  dynamic "volume" {
-    for_each = var.volumes
-    content {
-      name      = volume.value.name
-
-      dynamic "efs_volume_configuration" {
-        for_each = lookup(volume.value, "efs_volume_configuration", [])
-        content {
-          file_system_id = lookup(efs_volume_configuration.value, "file_system_id", null)
-          root_directory = lookup(efs_volume_configuration.value, "root_directory", null)
-        }
-      }
+  volume {
+    name = "efs-config"
+    efs_volume_configuration {
+      file_system_id = var.efs_file_system_id
+      root_directory = var.efs_root_directory
     }
   }
 

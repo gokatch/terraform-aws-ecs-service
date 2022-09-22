@@ -393,7 +393,48 @@ resource "aws_ecs_task_definition" "main" {
   memory                   = var.ecs_use_fargate ? var.fargate_task_memory : ""
   execution_role_arn       = join("", aws_iam_role.task_execution_role.*.arn)
 
-  container_definitions = var.container_definitions_json
+  container_definitions = <<-DEFINITION
+    [
+      {
+        "environmentFiles": [
+            {
+            "value": "${var.env_s3_arn}/.env",
+            "type": "s3"
+            }
+        ],
+        "logConfiguration": {
+            "logDriver": "awslogs",
+            "options": {
+              "awslogs-group": "${local.awslogs_group}",
+              "awslogs-region": "${var.aws_region}"
+            }
+        },
+        "entryPoint": [
+            "pm2-runtime",
+            "./process.yml"
+        ],
+        "portMappings": [
+            {
+            "hostPort": ${var.container_port},
+            "protocol": "tcp",
+            "containerPort": ${var.container_port}
+            }
+        ],
+        "cpu": 256,
+        "memory": 256,
+        "mountPoints": [
+            {
+                "containerPath": "${var.vol_container_path}",
+                "sourceVolume": "efs-config"
+            }
+        ],
+        "image": "${var.container_image}",
+        "essential": true,
+
+        "name": "${var.name}-${var.environment}"
+      }
+    ]
+    DEFINITION
 
   dynamic "volume" {
     for_each = var.volumes

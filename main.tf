@@ -552,4 +552,9 @@ resource "aws_ecs_service" "main" {
   lifecycle {
     ignore_changes = [task_definition]
   }
+
+  deployment_circuit_breaker {
+    enable   = true
+    rollback = true
+  }
 }
